@@ -30,104 +30,156 @@
         // Add FPS stats.
         (function () { var script = document.createElement('script'); script.onload = function () { var stats = new Stats(); document.body.appendChild(stats.dom); requestAnimationFrame(function loop() { stats.update(); requestAnimationFrame(loop) }); }; script.src = '//rawgit.com/mrdoob/stats.js/master/build/stats.min.js'; document.head.appendChild(script); })();
 
-        // A scene is what we will be viewing and where objects live in.
-        var scene = new THREE.Scene();
-        var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        var renderer = new THREE.WebGLRenderer();
+        var scene, camera, renderer, raycaster;
+        var mouse = new THREE.Vector2(), INTERSECTED;
+        var cube1, cube2;
 
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(renderer.domElement);
+        init();
+        animate();
 
-        // When the window is resized, update size of the scene and camera aspect ratio.
-        window.addEventListener('resize', function () {
-            var width = window.innerWidth;
-            var height = window.innerHeight;
-            renderer.setSize(width, height);
+        function init() {
+            // A scene is what we will be viewing and where objects live in.
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xf0f0f0);
 
-            // Re-calculate aspect ratio.
-            camera.aspect = width / height;
-            camera.updateProjectionMatrix();
-        });
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 10000);
+            // The bigger the number, the further the camera.
+            camera.position.z = 3;
 
-        // Add orbit controls.
-        controls = new THREE.OrbitControls(camera, renderer.domElement);
+            renderer = new THREE.WebGLRenderer();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
 
-        // Create the shape.
-        // Parameters: width, height, depth.
-        var geometry = new THREE.BoxGeometry(1, 1, 1);
+            // Capture mouse event via raycaster.
+            raycaster = new THREE.Raycaster();
 
-        // Available materials include basic, lambert, phong.
-        var cubeMaterials = [
-            // Right side of the cube.
-            new THREE.MeshLambertMaterial({
-                map: new THREE.TextureLoader().load("./img/1.jpg"),
-                // DoubleSide ensures that we can view the the materials 
-                // when the camera is either inside or outside the cube.
-                side: THREE.DoubleSide
-            }),
-            // Left side of the cube.
-            new THREE.MeshPhongMaterial({
-                map: new THREE.TextureLoader().load("./img/2.jpg"),
-                side: THREE.DoubleSide
-            }),
-            // Top side of the cube.
-            new THREE.MeshBasicMaterial({
-                map: new THREE.TextureLoader().load("./img/3.jpg"),
-                side: THREE.DoubleSide
-            }),
-            // Bottom side of the cube.
-            new THREE.MeshBasicMaterial({
-                map: new THREE.TextureLoader().load("./img/4.jpg"),
-                side: THREE.DoubleSide
-            }),
-            // Front side of the cube.
-            new THREE.MeshBasicMaterial({
-                map: new THREE.TextureLoader().load("./img/5.jpg"),
-                side: THREE.DoubleSide
-            }),
-            // Back side of the cube.
-            new THREE.MeshBasicMaterial({
-                map: new THREE.TextureLoader().load("./img/6.jpg"),
-                side: THREE.DoubleSide
-            })
-        ];
+            // Add light source via lighting techniques such as ambient, point, directional.
+            // Parameters: light color, light intensity.
+            // Note: light doesn't work with MeshBasicMaterial.
+            // Directional light:
+            var light = new THREE.DirectionalLight(0xffffff, 1);
+            light.position.set(5, 5, 5).normalize();
+            scene.add(light);
 
-        // Create material, color or image texture.
-        // var material = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true });
-        var cube = new THREE.Mesh(geometry, cubeMaterials);
-        scene.add(cube);
+            // Ambient light:
+            // var ambientLight = new THREE.AmbientLight(0xffffff, 1);
+            // scene.add(ambientLight);
 
-        // The bigger the number, the further the camera.
-        camera.position.z = 3;
 
-        // Add light source via lighting techniques such as ambient, point, directional.
-        // Parameters: light color, light intensity.
-        // Note: light doesn't work with MeshBasicMaterial.
-        var ambientLight = new THREE.AmbientLight(0xffffff, 2.0);
-        scene.add(ambientLight);
+            // When the window is resized, update size of the scene and camera aspect ratio.
+            window.addEventListener('resize', function () {
+                var width = window.innerWidth;
+                var height = window.innerHeight;
+                renderer.setSize(width, height);
 
-        // Game logic.
-        var update = function () {
+                // Re-calculate aspect ratio.
+                camera.aspect = width / height;
+                camera.updateProjectionMatrix();
+            });
+
+            // Add orbit controls.
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+            // Create the shape.
+            // Parameters: width, height, depth.
+            var geometry = new THREE.BoxGeometry(1, 1, 1);
+
+            // Available materials include basic, lambert, phong.
+            // var cubeMaterials = [
+            //     // Right side of the cube.
+            //     new THREE.MeshLambertMaterial({
+            //         map: new THREE.TextureLoader().load("./img/1.jpg"),
+            //         // DoubleSide ensures that we can view the the materials 
+            //         // when the camera is either inside or outside the cube.
+            //         side: THREE.DoubleSide
+            //     }),
+            //     // Left side of the cube.
+            //     new THREE.MeshPhongMaterial({
+            //         map: new THREE.TextureLoader().load("./img/2.jpg"),
+            //         side: THREE.DoubleSide
+            //     }),
+            //     // Top side of the cube.
+            //     new THREE.MeshBasicMaterial({
+            //         map: new THREE.TextureLoader().load("./img/3.jpg"),
+            //         side: THREE.DoubleSide
+            //     }),
+            //     // Bottom side of the cube.
+            //     new THREE.MeshBasicMaterial({
+            //         map: new THREE.TextureLoader().load("./img/4.jpg"),
+            //         side: THREE.DoubleSide
+            //     }),
+            //     // Front side of the cube.
+            //     new THREE.MeshBasicMaterial({
+            //         map: new THREE.TextureLoader().load("./img/5.jpg"),
+            //         side: THREE.DoubleSide
+            //     }),
+            //     // Back side of the cube.
+            //     new THREE.MeshBasicMaterial({
+            //         map: new THREE.TextureLoader().load("./img/6.jpg"),
+            //         side: THREE.DoubleSide
+            //     })
+            // ];
+
+            // Add some cubes to our scene.
+            cube1 = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({ color: 0xfb556e }));
+            cube1.position.set(-1, 0, 0);
+            scene.add(cube1);
+
+            cube2 = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({ color: 0x0081c8 }));
+            cube2.position.set(1, 0, 0);
+            scene.add(cube2);
+
+            document.addEventListener('mousemove', onDocumentMouseMove, false);
+        }
+
+        function onDocumentMouseMove(event) {
+            // calculate mouse position in normalized device coordinates
+            // (-1 to +1) for both components
+
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
+        }
+
+        function update() {
             // Rotate the cube for every animation frame.
-            cube.rotation.x += 0.01;
-            cube.rotation.y += 0.01;
+            cube1.rotation.x += 0.01;
+            cube1.rotation.y += 0.01;
         };
 
         // Draw scene.
-        var render = function () {
+        function render() {
+            // Update the picking ray with the camera and mouse position.
+            raycaster.setFromCamera(mouse, camera);
+
+            // Calculate objects intersecting the picking ray.
+            var intersects = raycaster.intersectObjects(scene.children);
+
+            if (intersects.length > 0) {
+                if (INTERSECTED != intersects[0].object) {
+                    // Before set the color of currently intersected object,
+                    // we need to make sure that the color of the last intersected object is reset to its original.
+                    if (INTERSECTED) INTERSECTED.material.emissive.setHex(INTERSECTED.currentHex);
+
+                    // Update the currently intersected object.
+                    INTERSECTED = intersects[0].object;
+                    INTERSECTED.currentHex = INTERSECTED.material.emissive.getHex();
+                    // Set a new hover color.
+                    INTERSECTED.material.emissive.setHex(0xffff00);
+                }
+            } else {
+                if (INTERSECTED) INTERSECTED.material.emissive.setHex(INTERSECTED.currentHex);
+                INTERSECTED = null;
+            }
+
             renderer.render(scene, camera);
-
         };
 
-        // Run game loop (update, render, repeat).
-        var gameLoop = function () {
-            requestAnimationFrame(gameLoop);
+        function animate() {
+            requestAnimationFrame(animate);
 
-            update();
             render();
+            update();
         };
-
-        gameLoop();
     </script>
 </body>
 

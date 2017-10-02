@@ -18,10 +18,18 @@
             width: 100%;
             height: 100%;
         }
+
+        .clicked-elem {
+            position: absolute;
+            left: 50%;
+            top: 10%;
+            transform: translateX(-50%);
+        }
     </style>
 </head>
 
 <body>
+    <h1 class="clicked-elem">Clicked Element:</h1>
 
     <!-- Three.js CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/87/three.min.js"></script>
@@ -33,6 +41,7 @@
         var scene, camera, renderer, raycaster;
         var mouse = new THREE.Vector2(), INTERSECTED;
         var cube1, cube2;
+        var clickedElem;
 
         init();
         animate();
@@ -123,13 +132,22 @@
             // Add some cubes to our scene.
             cube1 = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({ color: 0xfb556e }));
             cube1.position.set(-1, 0, 0);
+            // Add some custom properties.
+            cube1.desc = 'Red Cube';
             scene.add(cube1);
 
             cube2 = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({ color: 0x0081c8 }));
             cube2.position.set(1, 0, 0);
+            cube2.desc = 'Blue Cube';
             scene.add(cube2);
 
+            clickedElem = document.querySelector(".clicked-elem");
+
+            // Attach event listener to the DOM,
+            // raycaster will handle which specific object on the scene
+            // is triggered by the event listener.
             document.addEventListener('mousemove', onDocumentMouseMove, false);
+            document.addEventListener('click', onDocumentMouseClick, false);
         }
 
         function onDocumentMouseMove(event) {
@@ -138,6 +156,12 @@
 
             mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
             mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
+        }
+
+        function onDocumentMouseClick(event) {
+            if (INTERSECTED) {
+                clickedElem.innerText = 'Clicked Element: ' + INTERSECTED.desc;
+            }
         }
 
         function update() {
@@ -154,11 +178,17 @@
             // Calculate objects intersecting the picking ray.
             var intersects = raycaster.intersectObjects(scene.children);
 
+            // If mouse is over the object...
             if (intersects.length > 0) {
+                document.body.style.cursor = 'pointer';
+
+                // If mouse is on the object that is different from the last one...
                 if (INTERSECTED != intersects[0].object) {
                     // Before set the color of currently intersected object,
                     // we need to make sure that the color of the last intersected object is reset to its original.
-                    if (INTERSECTED) INTERSECTED.material.emissive.setHex(INTERSECTED.currentHex);
+                    if (INTERSECTED) {
+                        INTERSECTED.material.emissive.setHex(INTERSECTED.currentHex)
+                    }
 
                     // Update the currently intersected object.
                     INTERSECTED = intersects[0].object;
@@ -167,7 +197,13 @@
                     INTERSECTED.material.emissive.setHex(0xffff00);
                 }
             } else {
-                if (INTERSECTED) INTERSECTED.material.emissive.setHex(INTERSECTED.currentHex);
+                // If mouse is away from the object...
+                document.body.style.cursor = 'default';
+
+                if (INTERSECTED) {
+                    INTERSECTED.material.emissive.setHex(INTERSECTED.currentHex)
+                }
+
                 INTERSECTED = null;
             }
 
